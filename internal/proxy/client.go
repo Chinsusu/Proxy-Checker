@@ -3,7 +3,6 @@ package proxy
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -22,8 +21,8 @@ type ProxyClient struct {
 }
 
 func NewProxyClient(proxyStr string, userAgent string, timeout time.Duration) (*ProxyClient, error) {
-	// Normalize proxy string. Default to http if no scheme is provided.
-	finalProxyStr := proxyStr
+	// Normalize proxy string.
+	finalProxyStr := strings.TrimSpace(proxyStr)
 	scheme := "http"
 	if strings.Contains(finalProxyStr, "://") {
 		parts := strings.SplitN(finalProxyStr, "://", 2)
@@ -31,31 +30,53 @@ func NewProxyClient(proxyStr string, userAgent string, timeout time.Duration) (*
 		finalProxyStr = parts[1]
 	}
 
-	// Handle IP:Port:User:Pass format
-	parts := strings.Split(finalProxyStr, ":")
-	var proxyURL *url.URL
-	var err error
+	// Advanced Parsing for various formats:
+	// 1. IP:Port:User:Pass
+	// 2. User:Pass@IP:Port
+	// 3. IP:Port
+	var host string
+	var user *url.Userinfo
 
-	if len(parts) >= 4 {
-		// IP:Port:User:Pass -> scheme://User:Pass@IP:Port
-		u := fmt.Sprintf("%s://%s:%s@%s:%s", scheme, parts[2], parts[3], parts[0], parts[1])
-		proxyURL, err = url.Parse(u)
+	if strings.Contains(finalProxyStr, "@") {
+		// Format: User:Pass@IP:Port
+		parts := strings.SplitN(finalProxyStr, "@", 2)
+		userInfo := parts[0]
+		host = parts[1]
+		if uParts := strings.SplitN(userInfo, ":", 2); len(uParts) == 2 {
+			user = url.UserPassword(uParts[0], uParts[1])
+		} else {
+			user = url.User(userInfo)
+		}
 	} else {
-		// IP:Port or scheme://IP:Port
-		u := fmt.Sprintf("%s://%s", scheme, finalProxyStr)
-		proxyURL, err = url.Parse(u)
+		parts := strings.Split(finalProxyStr, ":")
+		if len(parts) >= 4 {
+			// Format: IP:Port:User:Pass
+			host = net.JoinHostPort(parts[0], parts[1])
+			user = url.UserPassword(parts[2], parts[3])
+		} else if len(parts) >= 2 {
+			// Format: IP:Port
+			host = net.JoinHostPort(parts[0], parts[1])
+		} else {
+			host = finalProxyStr
+		}
 	}
 
-	if err != nil {
-		return nil, err
+	proxyURL := &url.URL{
+		Scheme: scheme,
+		Host:   host,
+		User:   user,
 	}
 
-	// Logging (sanitized)
-	sanitizedURL := *proxyURL
-	if sanitizedURL.User != nil {
-		sanitizedURL.User = url.UserPassword(sanitizedURL.User.Username(), "********")
+	// Logging (SAFE: Do not modify the original proxyURL object)
+	displayUser := "none"
+	if proxyURL.User != nil {
+		displayUser = proxyURL.User.Username()
 	}
-	log.Debug().Str("proxy_parsed", sanitizedURL.String()).Msg("NewProxyClient created")
+	log.Debug().
+		Str("scheme", proxyURL.Scheme).
+		Str("host", proxyURL.Host).
+		Str("user", displayUser).
+		Msg("Proxy client initialized (Actual password is kept secret in logs)")
 
 	baseDialer := &net.Dialer{
 		Timeout:   timeout,

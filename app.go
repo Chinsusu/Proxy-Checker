@@ -138,33 +138,33 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 		// Step 1: Connectivity Check (Live check)
 		// We use a reliable IP lookup service to verify the proxy works and get our own IP
 		// Using http instead of https to avoid CONNECT handshake overhead/failures.
-		a.logger.Debug().Str("proxy", proxyStr).Msg("Attempting HTTP connectivity check")
+		a.logger.Info().Str("proxy", proxyStr).Msg(">>> STEP 1: Testing HTTP Connectivity")
 		testResp, err := client.HTTPClient.Get("http://api.ipify.org")
 
 		// Protocol Fallback: If no protocol was specified and HTTP failed, try SOCKS5
 		if err != nil && !strings.Contains(proxyStr, "://") {
-			a.logger.Info().Str("proxy", proxyStr).Err(err).Msg("HTTP check failed, retrying with SOCKS5")
+			a.logger.Info().Str("proxy", proxyStr).Msg("HTTP check failed. Trying SOCKS5 fallback...")
 			s5Client, s5Err := proxy.NewProxyClient("socks5://"+proxyStr, ua, a.config.Proxy.ConnectionTimeout)
 			if s5Err == nil {
-				a.logger.Debug().Str("proxy", proxyStr).Msg("Attempting SOCKS5 connectivity check")
+				a.logger.Info().Str("proxy", proxyStr).Msg(">>> STEP 2: Testing SOCKS5 Connectivity")
 				testResp, s5Err = s5Client.HTTPClient.Get("http://api.ipify.org")
 				if s5Err == nil {
-					a.logger.Info().Str("proxy", proxyStr).Msg("SOCKS5 check successful")
+					a.logger.Info().Str("proxy", proxyStr).Msg("SOCKS5 connectivity verified successfully!")
 					testResp.Body.Close()
 					client = s5Client // Switch to SOCKS5 client for subsequent checks
 					err = nil
 				} else {
-					a.logger.Warn().Str("proxy", proxyStr).Err(s5Err).Msg("SOCKS5 check failed")
+					a.logger.Warn().Str("proxy", proxyStr).Err(s5Err).Msg("SOCKS5 fallback also failed.")
 				}
 			}
 		}
 
 		if err != nil {
-			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy is Dead")
+			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy is DEAD - All attempts failed.")
 			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Connection failed: " + err.Error()}
 		}
 		testResp.Body.Close()
-		a.logger.Info().Str("proxy", proxyStr).Msg("Proxy is Live")
+		a.logger.Info().Str("proxy", proxyStr).Msg("Proxy is LIVE")
 
 		// Step 2: Quality Check
 		res, err := checker.CheckIPQuality(ip, client)
