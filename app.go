@@ -135,11 +135,19 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Invalid proxy format"}
 		}
 
+		// Step 0: TCP Pre-Check (Verify port reachability)
+		a.logger.Info().Str("proxy", proxyStr).Msg(">>> STEP 0: Verifying TCP Port Reachability")
+		if err := client.RawTCPCheck(); err != nil {
+			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy Port Unreachable")
+			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "TCP unreachable: " + err.Error()}
+		}
+		a.logger.Info().Str("proxy", proxyStr).Msg("TCP Port is OPEN")
+
 		// Step 1: Connectivity Check (Live check)
-		// We use a reliable IP lookup service to verify the proxy works and get our own IP
-		// Using http instead of https to avoid CONNECT handshake overhead/failures.
+		// Switch to Amazon CheckIP for better reliability
+		testTarget := "http://checkip.amazonaws.com"
 		a.logger.Info().Str("proxy", proxyStr).Msg(">>> STEP 1: Testing HTTP Connectivity")
-		testResp, err := client.HTTPClient.Get("http://api.ipify.org")
+		testResp, err := client.HTTPClient.Get(testTarget)
 
 		// Protocol Fallback: If no protocol was specified and HTTP failed, try SOCKS5
 		if err != nil && !strings.Contains(proxyStr, "://") {
@@ -147,7 +155,7 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 			s5Client, s5Err := proxy.NewProxyClient("socks5://"+proxyStr, ua, a.config.Proxy.ConnectionTimeout)
 			if s5Err == nil {
 				a.logger.Info().Str("proxy", proxyStr).Msg(">>> STEP 2: Testing SOCKS5 Connectivity")
-				testResp, s5Err = s5Client.HTTPClient.Get("http://api.ipify.org")
+				testResp, s5Err = s5Client.HTTPClient.Get(testTarget)
 				if s5Err == nil {
 					a.logger.Info().Str("proxy", proxyStr).Msg("SOCKS5 connectivity verified successfully!")
 					testResp.Body.Close()
@@ -160,8 +168,8 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy is DEAD - All attempts failed.")
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Connection failed: " + err.Error()}
+			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy is DEAD - Protocol/Auth failed.")
+			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Protocol failed: " + err.Error()}
 		}
 		testResp.Body.Close()
 		a.logger.Info().Str("proxy", proxyStr).Msg("Proxy is LIVE")

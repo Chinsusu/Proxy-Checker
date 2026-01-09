@@ -101,7 +101,6 @@ func NewProxyClient(proxyStr string, userAgent string, timeout time.Duration) (*
 			return dialer.Dial(network, addr)
 		}
 	}
-
 	client := &http.Client{
 		Transport: transport,
 		Timeout:   timeout,
@@ -113,6 +112,16 @@ func NewProxyClient(proxyStr string, userAgent string, timeout time.Duration) (*
 		UserAgent:  userAgent,
 		Timeout:    timeout,
 	}, nil
+}
+
+func (pc *ProxyClient) RawTCPCheck() error {
+	dialer := &net.Dialer{Timeout: pc.Timeout}
+	conn, err := dialer.Dial("tcp", pc.Proxy.Host)
+	if err != nil {
+		return err
+	}
+	conn.Close()
+	return nil
 }
 
 func (pc *ProxyClient) TestConnectivity() (bool, error) {
