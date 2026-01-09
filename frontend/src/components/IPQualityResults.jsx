@@ -42,9 +42,10 @@ const IPQualityResults = ({ results = [], onExportCSV }) => {
         return matchesSearch && matchesStatus;
     });
 
-    const liveCount = results.filter(r => r.status?.toLowerCase() === 'live').length;
-    const deadCount = results.filter(r => r.status?.toLowerCase() === 'dead').length;
-    const liveRate = results.length > 0 ? ((liveCount / results.length) * 100).toFixed(1) : 0;
+    const liveCount = (results || []).filter(r => r.status?.toLowerCase() === 'live').length;
+    const deadCount = (results || []).filter(r => r.status?.toLowerCase() === 'dead').length;
+    const totalCount = results?.length ?? 0;
+    const liveRate = totalCount > 0 ? ((liveCount / totalCount) * 100).toFixed(1) : 0;
 
     return (
         <div className="ipquality-results">
@@ -56,7 +57,7 @@ const IPQualityResults = ({ results = [], onExportCSV }) => {
             <div className="stats-bar">
                 <div className="stat-item">
                     <span className="stat-label">Total</span>
-                    <span className="stat-value">{results.length}</span>
+                    <span className="stat-value">{totalCount}</span>
                 </div>
                 <div className="stat-item stat-live">
                     <span className="stat-label">Live</span>
@@ -209,7 +210,7 @@ const IPQualityResults = ({ results = [], onExportCSV }) => {
                         ) : (
                             <tr>
                                 <td colSpan="9" className="no-results">
-                                    {results.length === 0 ? 'No results yet. Check some proxies from the Home tab.' : 'No results match your filters.'}
+                                    {(!results || results.length === 0) ? 'No results yet. Check some proxies from the Home tab.' : 'No results match your filters.'}
                                 </td>
                             </tr>
                         )}
@@ -218,7 +219,7 @@ const IPQualityResults = ({ results = [], onExportCSV }) => {
             </div>
 
             <div className="results-footer">
-                <p>Showing {filteredResults.length} of {results.length} results</p>
+                <p>Showing {filteredResults.length} of {totalCount} results</p>
             </div>
         </div>
     );

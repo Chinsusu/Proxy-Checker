@@ -130,7 +130,7 @@ const WhoisResults = ({ results = [], onExportCSV }) => {
                         ) : (
                             <tr>
                                 <td colSpan="8" className="no-results">
-                                    {results.length === 0 ? 'No results yet. Check some IPs from the Home tab.' : 'No results match your search.'}
+                                    {(!results || results.length === 0) ? 'No results yet. Check some IPs from the Home tab.' : 'No results match your search.'}
                                 </td>
                             </tr>
                         )}
@@ -139,7 +139,7 @@ const WhoisResults = ({ results = [], onExportCSV }) => {
             </div>
 
             <div className="results-footer">
-                <p>Total Results: {filteredResults.length} of {results.length}</p>
+                <p>Total Results: {filteredResults.length} of {results?.length ?? 0}</p>
             </div>
         </div>
     );

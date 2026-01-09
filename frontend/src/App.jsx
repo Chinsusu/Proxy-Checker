@@ -65,7 +65,7 @@ function App() {
     };
 
     const exportWhoisCSV = () => {
-        if (whoisResults.length === 0) return;
+        if (!whoisResults || whoisResults.length === 0) return;
         const headers = ["IP", "Country", "Region", "City", "ISP", "ASN", "Timezone", "Status"];
         const rows = whoisResults.map(r => [
             r.ip, r.country, r.region, r.city, r.isp, r.asn, r.timezone, r.status
@@ -79,7 +79,7 @@ function App() {
     };
 
     const exportQualityCSV = () => {
-        if (ipQualityResults.length === 0) return;
+        if (!ipQualityResults || ipQualityResults.length === 0) return;
         const headers = ["IP:Port", "Status", "Country", "City", "VPN", "Proxy", "ISP", "Organization"];
         const rows = ipQualityResults.map(r => [
             r.proxy, r.status, r.country, r.city, r.vpn, r.proxyFlag, r.isp, r.organization

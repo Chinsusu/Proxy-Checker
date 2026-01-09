@@ -10,9 +10,9 @@ function Home({ runWhois, runQuality, loading }) {
         try {
             const res = await api.parseInput(input);
             setStats({
-                total: res.total,
-                ips: res.ips.length,
-                proxies: res.proxies.length
+                total: res.total || 0,
+                ips: res.ips?.length ?? 0,
+                proxies: res.proxies?.length ?? 0
             });
         } catch (err) {
             console.error(err);
