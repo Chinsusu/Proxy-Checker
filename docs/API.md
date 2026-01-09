@@ -1,35 +1,28 @@
-# API Documentation - Backend Bridge
+# REST API Documentation
 
-The following methods are exposed from Go to the Frontend via the Wails bridge.
+The Proxy Checker exposes a RESTful API for integration.
 
-## Methods
+## Base URL
+`/api`
 
-### `ParseInput(input string) map[string]interface{}`
-Parses raw text and returns statistics.
-- **Input**: Raw string from textarea.
-- **Output**: JSON object with `ips`, `proxies`, and `total`.
+## Endpoints
 
-### `CheckWhois(ips []string) []WhoisResult`
-Concurrent Whois check for a list of IPs.
-- **Input**: Array of IP strings.
-- **Output**: Array of `WhoisResult` objects.
+### `POST /parse`
+Parses raw text into structured IP and Proxy counts.
+- **Request Body**: `{ "input": "string" }`
+- **Response**: `{ "ips": [...], "proxies": [...], "total": 0 }`
 
-### `CheckIPQuality(proxyStrings []string) []IPQualityResult`
-Concurrent IPQualityScore check using proxies.
-- **Input**: Array of proxy strings (`IP:Port`).
-- **Output**: Array of `IPQualityResult` objects.
+### `POST /check/whois`
+Performs concurrent Whois lookups.
+- **Request Body**: `{ "ips": ["1.1.1.1", ...] }`
+- **Response**: `[ { "ip": "...", "country": "...", ... }, ... ]`
 
-## Data Structures
+### `POST /check/quality`
+Performs concurrent IPQuality analysis using proxies.
+- **Request Body**: `{ "proxies": ["IP:Port", ...] }`
+- **Response**: `[ { "ip": "...", "status": "Live", ... }, ... ]`
 
-### `WhoisResult`
-- `ip`: string
-- `country`: string
-- `city`: string
-- `isp`: string
-- `status`: "success" | "failed"
-
-### `IPQualityResult`
-- `ip`: string
-- `status`: "Live" | "Dead"
-- `vpn`: boolean
-- `proxy`: boolean
+## Status Codes
+- `200 OK`: Request successful.
+- `400 Bad Request`: Invalid JSON or missing parameters.
+- `500 Internal Server Error`: Server-side processing error.

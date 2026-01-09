@@ -39,7 +39,7 @@ var DefaultConfig = `
 api:
   ipwho:
     rate_limit: 10
-    timeout: 10s
+    timeout: 30s
     cache_ttl: 24h
   ipquality:
     timeout: 30s
@@ -53,7 +53,7 @@ worker:
   retry_delay: 2s
 
 proxy:
-  connection_timeout: 10s
+  connection_timeout: 30s
   types: ["http", "https", "socks5"]
 
 storage:
@@ -63,16 +63,22 @@ storage:
 
 func LoadConfig(path string) (*Config, error) {
 	var config Config
+	// Load defaults first
+	if err := yaml.Unmarshal([]byte(DefaultConfig), &config); err != nil {
+		return nil, err
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
-		// If fails to load, use default or return error
-		err = yaml.Unmarshal([]byte(DefaultConfig), &config)
-		return &config, err
+		// If file doesn't exist, just return defaults
+		return &config, nil
 	}
 	defer f.Close()
 
+	// Overwrite defaults with file content
 	if err := yaml.NewDecoder(f).Decode(&config); err != nil {
-		return nil, err
+		// If file is empty or invalid, we still have defaults
+		return &config, nil
 	}
 	return &config, nil
 }

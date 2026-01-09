@@ -1,0 +1,244 @@
+.whois-results {
+    padding: 2rem;
+    max-width: 100%;
+    height: 100%;
+    overflow: auto;
+}
+
+.results-header {
+    margin-bottom: 1.5rem;
+}
+
+.results-header h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 0.5rem 0;
+}
+
+.results-subtitle {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.results-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.search-input {
+    flex: 1;
+    max-width: 400px;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.btn-export {
+    padding: 0.75rem 1.5rem;
+    background: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-export:hover {
+    background: #4f46e5;
+    transform: translateY(-1px);
+}
+
+.table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: auto;
+    max-height: calc(100vh - 280px);
+}
+
+/* ===================================== */
+/* CRITICAL FIX: Fixed table layout      */
+/* ===================================== */
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    /* ← KEY: Enables fixed column widths */
+    min-width: 1400px;
+}
+
+.results-table thead {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    z-index: 10;
+}
+
+.results-table th {
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e0e0e0;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.results-table th:hover {
+    background: #f0f0f0;
+}
+
+/* ===================================== */
+/* CRITICAL FIX: Fixed column widths     */
+/* ===================================== */
+.col-ip {
+    width: 150px;
+}
+
+.col-country {
+    width: 140px;
+}
+
+.col-region {
+    width: 120px;
+}
+
+.col-city {
+    width: 120px;
+}
+
+.col-isp {
+    width: 200px;
+}
+
+.col-asn {
+    width: 180px;
+}
+
+.col-timezone {
+    width: 180px;
+}
+
+.col-status {
+    width: 110px;
+}
+
+.results-table td {
+    padding: 1rem;
+    font-size: 0.9rem;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.row-even {
+    background: #ffffff;
+}
+
+.row-odd {
+    background: #fafafa;
+}
+
+.results-table tbody tr:hover {
+    background: #f5f5ff;
+    cursor: pointer;
+}
+
+.sort-icon {
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
+    color: #6366f1;
+}
+
+.status-badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.status-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-failed {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.no-results {
+    text-align: center;
+    padding: 3rem !important;
+    color: #999;
+    font-style: italic;
+}
+
+.results-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.results-footer p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 1600px) {
+    .table-container {
+        overflow-x: auto;
+    }
+}
+
+/* Scrollbar styling */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}

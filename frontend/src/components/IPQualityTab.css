@@ -1,0 +1,122 @@
+.quality-container {
+    width: 100%;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-width: 1600px;
+    background: white;
+}
+
+.results-table th,
+.results-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.results-table th {
+    background-color: #f8f7fa;
+    color: var(--text-main);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.results-table tr:hover {
+    background-color: #fcfcfe;
+}
+
+/* Fixed column widths */
+.col-proxy {
+    width: 18rem;
+}
+
+.col-status {
+    width: 10rem;
+    text-align: center !important;
+}
+
+.col-country {
+    width: 14rem;
+}
+
+.col-city {
+    width: 13rem;
+}
+
+.col-region {
+    width: 13rem;
+}
+
+.col-vpn {
+    width: 9rem;
+    text-align: center !important;
+}
+
+.col-proxy-flag {
+    width: 9rem;
+    text-align: center !important;
+}
+
+.col-isp {
+    width: 22rem;
+}
+
+.col-org {
+    width: 22rem;
+}
+
+/* Stats Bar */
+.stats-bar {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(165, 163, 174, 0.3);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+/* Row coloring */
+.row-clean {}
+
+.row-risk {
+    background-color: rgba(255, 159, 67, 0.05);
+}
+
+.row-dead {
+    background-color: rgba(234, 84, 85, 0.04);
+}
+
+.badge-vpn {
+    background-color: rgba(115, 103, 240, 0.16);
+    color: var(--primary);
+}

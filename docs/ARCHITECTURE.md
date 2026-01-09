@@ -1,24 +1,22 @@
-# Architecture Documentation - Proxy Checker
+# Architecture Documentation - Proxy Checker (Web Server)
 
 ## System Overview
-The Proxy Checker is a desktop application designed for high-concurrency IP and proxy verification. It uses a Go backend for performance and a React frontend for a rich user experience, bridged by Wails v2.
+The Proxy Checker is a web-based application designed for high-concurrency IP and proxy verification. It features a Go-based REST API and a React-based SPA (Single Page Application) served directly by the Go backend.
 
 ## Components
-### 1. Backend (Go)
-- **Parser**: Sanitizes and categorizes user input into IP or Proxy models.
-- **Checker**: Implements API clients (IPWho.is) and web scrapers (IPQualityScore).
-- **Worker Pool**: Manages concurrent tasks to ensure responsiveness and high throughput.
-- **Proxy Client**: Custom HTTP client with support for authentication and User-Agent rotation.
-- **Storage**: SQLite-based caching layer to reduce API calls and improve performance.
+### 1. Backend (Go + Chi)
+- **REST API**: Exposes endpoints for parsing input and triggering concurrent checks.
+- **Worker Pool**: Manages parallel execution of checker jobs.
+- **Static File Server**: Serves the bundled React frontend from an embedded filesystem.
+- **Storage**: SQLite cache for persisting results.
 
 ### 2. Frontend (React)
-- **State Management**: React hooks for local state and results.
-- **UI Components**: Modular tabs for Home, Whois, and Quality analysis.
-- **Styling**: Vanilla CSS utilizing modern properties (glassmorphism, CSS variables).
+- **API Service**: Uses `fetch` to communicate with the Go backend.
+- **State Management**: React hooks for handling data and UI state.
+- **Responsive UI**: Glassmorphic design that works across standard web browsers.
 
 ## Data Flow
-1. User enters raw text in the Home tab.
-2. The frontend calls `ParseInput` via the Wails bridge.
-3. The backend returns parsed statistics.
-4. When a check is triggered, the backend spins up workers.
-5. Workers process jobs and return results to the frontend.
+1. The user accesses the web server via a browser.
+2. The Go server sends the React application to the client.
+3. User interactions trigger `fetch` requests to `/api/*` endpoints.
+4. The backend processes requests using its worker pool and returns JSON responses.

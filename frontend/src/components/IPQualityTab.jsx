@@ -1,6 +1,12 @@
 import React from 'react';
+import './IPQualityTab.css';
 
 function IPQualityTab({ results }) {
+    const total = results.length;
+    const live = results.filter(r => r.status === 'Live').length;
+    const dead = total - live;
+    const liveRate = total > 0 ? ((live / total) * 100).toFixed(1) : 0;
+
     const exportToCSV = () => {
         if (results.length === 0) return;
         const headers = ["IP:Port", "Status", "Country", "City", "VPN", "Proxy", "ISP", "Organization"];
@@ -21,43 +27,85 @@ function IPQualityTab({ results }) {
     };
 
     return (
-        <div className="fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2>IPQuality Results</h2>
+        <div className="quality-container">
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h1 className="page-title">IP Quality Analysis</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>Proxy and VPN detection results</p>
+                </div>
                 <button className="btn-secondary" onClick={exportToCSV} disabled={results.length === 0}>
                     Export CSV
                 </button>
             </div>
-            <div className="glass-card" style={{ padding: '0' }}>
-                <table>
+
+            {total > 0 && (
+                <div className="stats-bar fade-in">
+                    <div className="stat-item">
+                        <span className="stat-label">Total Proxies</span>
+                        <span className="stat-value">{total}</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Live</span>
+                        <span className="stat-value" style={{ color: 'var(--success)' }}>{live}</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Dead</span>
+                        <span className="stat-value" style={{ color: 'var(--danger)' }}>{dead}</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Live Rate</span>
+                        <span className="stat-value" style={{ color: 'var(--primary)' }}>{liveRate}%</span>
+                    </div>
+                </div>
+            )}
+
+            <div className="table-container fade-in">
+                <table className="results-table">
                     <thead>
                         <tr>
-                            <th>IP:Port</th>
-                            <th>Status</th>
-                            <th>Country</th>
-                            <th>City</th>
-                            <th>VPN</th>
-                            <th>Proxy</th>
-                            <th>ISP</th>
-                            <th>Organization</th>
+                            <th className="col-proxy">IP:Port</th>
+                            <th className="col-status">Status</th>
+                            <th className="col-country">Country</th>
+                            <th className="col-city">City</th>
+                            <th className="col-vpn">VPN</th>
+                            <th className="col-proxy-flag">Proxy</th>
+                            <th className="col-isp">ISP</th>
+                            <th className="col-org">Organization</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {results.map((res, i) => (
-                            <tr key={i}>
-                                <td>{res.ip}:{res.port}</td>
-                                <td className={res.status === 'Live' ? 'status-live' : 'status-dead'}>{res.status}</td>
-                                <td>{res.country}</td>
-                                <td>{res.city}</td>
-                                <td>{res.vpn ? '✅' : '❌'}</td>
-                                <td>{res.proxy ? '✅' : '❌'}</td>
-                                <td>{res.isp}</td>
-                                <td>{res.organization}</td>
-                            </tr>
-                        ))}
+                        {results.map((res, i) => {
+                            let rowClass = "row-clean";
+                            if (res.status !== 'Live') rowClass = "row-dead";
+                            else if (res.vpn || res.proxy) rowClass = "row-risk";
+
+                            return (
+                                <tr key={i} className={rowClass}>
+                                    <td className="col-proxy" style={{ fontWeight: 600, color: '#000' }}>{res.ip}:{res.port}</td>
+                                    <td className="col-status">
+                                        <span
+                                            className={`status-badge ${res.status === 'Live' ? 'status-success' : 'status-failed'}`}
+                                            title={res.error || ''}
+                                        >
+                                            {res.status}
+                                        </span>
+                                    </td>
+                                    <td className="col-country">{res.country}</td>
+                                    <td className="col-city">{res.city}</td>
+                                    <td className="col-vpn">
+                                        {res.vpn ? <span className="badge badge-vpn">VPN</span> : '-'}
+                                    </td>
+                                    <td className="col-proxy-flag">
+                                        {res.proxy ? <span className="badge badge-danger">PROXY</span> : '-'}
+                                    </td>
+                                    <td className="col-isp" title={res.isp}>{res.isp}</td>
+                                    <td className="col-org" title={res.organization}>{res.organization}</td>
+                                </tr>
+                            );
+                        })}
                         {results.length === 0 && (
                             <tr>
-                                <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-dim)' }}>
+                                <td colSpan="8" style={{ textAlign: 'center', padding: '100px', color: 'var(--text-muted)' }}>
                                     No results yet. Start checking from the Home tab.
                                 </td>
                             </tr>

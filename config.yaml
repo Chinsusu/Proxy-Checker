@@ -1,0 +1,23 @@
+api:
+  ipwho:
+    rate_limit: 10
+    timeout: 10s
+    cache_ttl: 24h
+  ipquality:
+    timeout: 30s
+    user_agents:
+      - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+    delay_range: [1000, 3000]
+
+worker:
+  pool_size: 5
+  retry_attempts: 3
+  retry_delay: 2s
+
+proxy:
+  connection_timeout: 10s
+  types: ["http", "https", "socks5"]
+
+storage:
+  cache_enabled: true
+  db_path: "./data/cache.db"
