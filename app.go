@@ -139,9 +139,24 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 		// We use a reliable IP lookup service to verify the proxy works and get our own IP
 		// Using http instead of https to avoid CONNECT handshake overhead/failures.
 		testResp, err := client.HTTPClient.Get("http://api.ipify.org")
+
+		// Protocol Fallback: If no protocol was specified and HTTP failed, try SOCKS5
+		if err != nil && !strings.Contains(proxyStr, "://") {
+			a.logger.Info().Str("proxy", proxyStr).Msg("HTTP check failed, retrying with SOCKS5")
+			s5Client, s5Err := proxy.NewProxyClient("socks5://"+proxyStr, ua, a.config.Proxy.ConnectionTimeout)
+			if s5Err == nil {
+				testResp, s5Err = s5Client.HTTPClient.Get("http://api.ipify.org")
+				if s5Err == nil {
+					testResp.Body.Close()
+					client = s5Client // Switch to SOCKS5 client for subsequent checks
+					err = nil
+				}
+			}
+		}
+
 		if err != nil {
 			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy is Dead")
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Connection failed"}
+			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Connection failed: " + err.Error()}
 		}
 		testResp.Body.Close()
 
@@ -150,7 +165,7 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			a.logger.Error().Err(err).Str("ip", ip).Str("proxy", proxyStr).Msg("IPQuality check failed")
 			// Even if IPQuality fails, it's still 'Live' because step 1 passed
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Live", Error: "Quality info unavailable"}
+			return models.IPQualityResult{IP: ip, Port: port, Status: "Live", Error: "Quality info failed: " + err.Error()}
 		}
 		res.Port = port
 		res.Status = "Live" // Ensure status is Live if we reach here

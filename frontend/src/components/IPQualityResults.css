@@ -254,6 +254,17 @@
     background: #fef3c7 !important;
 }
 
+.status-error-msg {
+    font-size: 10px;
+    color: var(--danger);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 151px;
+    opacity: 0.8;
+}
+
 .row-dead {
     background: #fef2f2 !important;
     opacity: 0.7;

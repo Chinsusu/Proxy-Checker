@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 type ProxyClient struct {
@@ -46,8 +48,19 @@ func NewProxyClient(proxyStr string, userAgent string, timeout time.Duration) (*
 	}
 
 	transport := &http.Transport{
-		Proxy:           http.ProxyURL(proxyURL),
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	// proxy.FromURL only supports socks5, socks4, socks4a.
+	// For http/https, we use the standard transport.Proxy.
+	if strings.HasPrefix(proxyURL.Scheme, "http") {
+		transport.Proxy = http.ProxyURL(proxyURL)
+	} else {
+		dialer, err := proxy.FromURL(proxyURL, proxy.Direct)
+		if err != nil {
+			return nil, err
+		}
+		transport.Dial = dialer.Dial
 	}
 
 	client := &http.Client{

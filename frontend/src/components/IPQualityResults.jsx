@@ -188,6 +188,11 @@ const IPQualityResults = ({ results = [], onExportCSV }) => {
                                             <span className={`status-badge status-${result.status?.toLowerCase()}`}>
                                                 {result.status}
                                             </span>
+                                            {result.error && (
+                                                <div className="status-error-msg" title={result.error}>
+                                                    {result.error}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="col-country">{result.country}</td>
                                         <td className="col-city">{result.city}</td>
