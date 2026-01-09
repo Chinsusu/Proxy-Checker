@@ -2,12 +2,12 @@ package checker
 
 import (
 	"fmt"
-	"io"
 	"ip-proxy-checker/internal/models"
 	"ip-proxy-checker/internal/proxy"
 	"net/http"
-	"regexp"
 	"strings"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 func CheckIPQuality(ip string, proxyClient *proxy.ProxyClient) (*models.IPQualityResult, error) {
@@ -22,14 +22,7 @@ func CheckIPQuality(ip string, proxyClient *proxy.ProxyClient) (*models.IPQualit
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	req.Header.Set("Cache-Control", "max-age=0")
-	req.Header.Set("Sec-Ch-Ua", `"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"`)
-	req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
-	req.Header.Set("Sec-Ch-Ua-Platform", `"Windows"`)
-	req.Header.Set("Sec-Fetch-Dest", "document")
-	req.Header.Set("Sec-Fetch-Mode", "navigate")
-	req.Header.Set("Sec-Fetch-Site", "none")
-	req.Header.Set("Sec-Fetch-User", "?1")
-	req.Header.Set("Upgrade-Insecure-Requests", "1")
+	req.Header.Set("Referer", "https://www.google.com/")
 
 	resp, err := proxyClient.HTTPClient.Do(req)
 	if err != nil {
@@ -41,36 +34,71 @@ func CheckIPQuality(ip string, proxyClient *proxy.ProxyClient) (*models.IPQualit
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("bad status code: %d", resp.StatusCode)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	html := string(body)
 	result := &models.IPQualityResult{
 		IP:     ip,
 		Status: "Live",
 	}
 
-	// Simple regex based scraper for demo purposes
-	// In production, use a more robust HTML parser like goquery
-	result.Country = extractField(html, `Country:</td>\s*<td>([^<]+)`)
-	result.City = extractField(html, `City:</td>\s*<td>([^<]+)`)
-	result.Region = extractField(html, `Region:</td>\s*<td>([^<]+)`)
-	result.ISP = extractField(html, `ISP:</td>\s*<td>([^<]+)`)
-	result.Organization = extractField(html, `Organization:</td>\s*<td>([^<]+)`)
+	// Targeted extraction from the table structure
+	table := doc.Find("table").First()
+	if table.Length() > 0 {
+		rows := table.Find("tr")
 
-	result.VPN = strings.Contains(strings.ToLower(html), "vpn detected: yes")
-	result.Proxy = strings.Contains(strings.ToLower(html), "proxy detected: yes")
+		// Row 2 contains Country, City, Region, VPN, Proxy
+		if rows.Length() >= 2 {
+			row2 := rows.Eq(1).Find("td")
+			if row2.Length() >= 5 {
+				result.Country = cleanValue(row2.Eq(0).Text())
+				result.City = cleanValue(row2.Eq(1).Text())
+				result.Region = cleanValue(row2.Eq(2).Text())
+				result.VPN = strings.EqualFold(cleanValue(row2.Eq(3).Text()), "Yes")
+				result.Proxy = strings.EqualFold(cleanValue(row2.Eq(4).Text()), "Yes")
+			}
+		}
+
+		// Row 4 contains ISP, Organization, Hostname, ASN, Tor
+		if rows.Length() >= 4 {
+			row4 := rows.Eq(3).Find("td")
+			if row4.Length() >= 5 {
+				result.ISP = cleanValue(row4.Eq(0).Text())
+				result.Organization = cleanValue(row4.Eq(1).Text())
+				// We could add Hostname/ASN to models if needed, for now we match existing fields
+			}
+		}
+	}
+
+	// Fraud Score: Targeted gauge center text
+	fraudScoreText := cleanValue(doc.Find(".grid-overlap.text-5xl.bold.text-center").First().Text())
+	if fraudScoreText != "" {
+		result.FraudScore = fraudScoreText
+	}
+
+	// Final Fallback: Label-based search if fields are still empty
+	if result.Country == "" || result.Country == "N/A" {
+		doc.Find("td, span, div").Each(func(i int, s *goquery.Selection) {
+			txt := strings.TrimSpace(s.Text())
+			if strings.HasPrefix(txt, "Country:") {
+				result.Country = strings.TrimSpace(strings.TrimPrefix(txt, "Country:"))
+			}
+			if result.ISP == "" && strings.HasPrefix(txt, "ISP:") {
+				result.ISP = strings.TrimSpace(strings.TrimPrefix(txt, "ISP:"))
+			}
+		})
+	}
 
 	return result, nil
 }
 
-func extractField(html, pattern string) string {
-	re := regexp.MustCompile(pattern)
-	matches := re.FindStringSubmatch(html)
-	if len(matches) > 1 {
-		return strings.TrimSpace(matches[1])
-	}
-	return "N/A"
+func cleanValue(s string) string {
+	f := strings.Fields(s)
+	return strings.Join(f, " ")
 }

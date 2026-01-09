@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"ip-proxy-checker/internal/checker"
 	"ip-proxy-checker/internal/models"
 	"ip-proxy-checker/internal/parser"
@@ -116,12 +117,12 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 	wp.Start(func(job checker.Job) interface{} {
 		proxyStr := job.Data.(string)
 
-		// Extract IP and Port for default display
-		ip := proxyStr
+		// Extract Host and Port for default display
+		host := proxyStr
 		port := ""
-		if idx := strings.Index(ip, ":"); idx != -1 {
-			port = ip[idx+1:]
-			ip = ip[:idx]
+		if idx := strings.Index(host, ":"); idx != -1 {
+			port = host[idx+1:]
+			host = host[:idx]
 			if idx2 := strings.Index(port, ":"); idx2 != -1 {
 				port = port[:idx2]
 			}
@@ -132,21 +133,21 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 		client, err := proxy.NewProxyClient(proxyStr, ua, a.config.Proxy.ConnectionTimeout)
 		if err != nil {
 			a.logger.Error().Err(err).Str("proxy", proxyStr).Msg("Failed to create proxy client")
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Invalid proxy format"}
+			return models.IPQualityResult{IP: host, Port: port, Status: "Dead", Error: "Invalid proxy format"}
 		}
 
 		// Step 0: TCP Pre-Check (Verify port reachability)
 		a.logger.Info().Str("proxy", proxyStr).Msg(">>> STEP 0: Verifying TCP Port Reachability")
 		if err := client.RawTCPCheck(); err != nil {
 			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy Port Unreachable")
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "TCP unreachable: " + err.Error()}
+			return models.IPQualityResult{IP: host, Port: port, Status: "Dead", Error: "TCP unreachable: " + err.Error()}
 		}
 		a.logger.Info().Str("proxy", proxyStr).Msg("TCP Port is OPEN")
 
-		// Step 1: Connectivity Check (Live check)
-		// Switch to Amazon CheckIP for better reliability
+		// Step 1: Connectivity Check & Exit IP Detection
+		// Switch to Amazon CheckIP for better reliability and to get our actual IP
 		testTarget := "http://checkip.amazonaws.com"
-		a.logger.Info().Str("proxy", proxyStr).Msg(">>> STEP 1: Testing HTTP Connectivity")
+		a.logger.Info().Str("proxy", proxyStr).Msg(">>> STEP 1: Testing Connectivity & Detecting Exit IP")
 		testResp, err := client.HTTPClient.Get(testTarget)
 
 		// Protocol Fallback: If no protocol was specified and HTTP failed, try SOCKS5
@@ -158,7 +159,6 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 				testResp, s5Err = s5Client.HTTPClient.Get(testTarget)
 				if s5Err == nil {
 					a.logger.Info().Str("proxy", proxyStr).Msg("SOCKS5 connectivity verified successfully!")
-					testResp.Body.Close()
 					client = s5Client // Switch to SOCKS5 client for subsequent checks
 					err = nil
 				} else {
@@ -169,17 +169,26 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy is DEAD - Protocol/Auth failed.")
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Protocol failed: " + err.Error()}
+			return models.IPQualityResult{IP: host, Port: port, Status: "Dead", Error: "Protocol failed: " + err.Error()}
 		}
-		testResp.Body.Close()
-		a.logger.Info().Str("proxy", proxyStr).Msg("Proxy is LIVE")
 
-		// Step 2: Quality Check
-		res, err := checker.CheckIPQuality(ip, client)
+		// Read the Exit IP from the response
+		exitIPBytes, _ := io.ReadAll(io.LimitReader(testResp.Body, 1024))
+		testResp.Body.Close()
+		exitIP := strings.TrimSpace(string(exitIPBytes))
+
+		if exitIP == "" {
+			a.logger.Warn().Str("proxy", proxyStr).Msg("Could not detect Exit IP")
+			return models.IPQualityResult{IP: host, Port: port, Status: "Dead", Error: "Could not detect Exit IP"}
+		}
+		a.logger.Info().Str("proxy", proxyStr).Str("exit_ip", exitIP).Msg("Proxy is LIVE")
+
+		// Step 2: Quality Check (Use the ACTUAL Exit IP)
+		res, err := checker.CheckIPQuality(exitIP, client)
 		if err != nil {
-			a.logger.Error().Err(err).Str("ip", ip).Str("proxy", proxyStr).Msg("IPQuality check failed")
+			a.logger.Error().Err(err).Str("exit_ip", exitIP).Str("proxy", proxyStr).Msg("IPQuality check failed")
 			// Even if IPQuality fails, it's still 'Live' because step 1 passed
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Live", Error: "Quality info failed: " + err.Error()}
+			return models.IPQualityResult{IP: exitIP, Port: port, Status: "Live", Error: "Quality info failed: " + err.Error()}
 		}
 		res.Port = port
 		res.Status = "Live" // Ensure status is Live if we reach here

@@ -25,5 +25,6 @@ type IPQualityResult struct {
 	Proxy        bool   `json:"proxy"`
 	ISP          string `json:"isp"`
 	Organization string `json:"organization"`
+	FraudScore   string `json:"fraud_score"`
 	Error        string `json:"error,omitempty"`
 }

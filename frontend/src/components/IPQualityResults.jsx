@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import './IPQualityResults.css';
 
+const getScoreLevel = (score) => {
+    const s = parseInt(score);
+    if (isNaN(s)) return 'unknown';
+    if (s < 30) return 'clean';
+    if (s < 75) return 'warning';
+    return 'high';
+};
+
 const IPQualityResults = ({ results = [], onExportCSV }) => {
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
     const [searchTerm, setSearchTerm] = useState('');
@@ -166,6 +174,12 @@ const IPQualityResults = ({ results = [], onExportCSV }) => {
                                     <span className="sort-icon">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                                 )}
                             </th>
+                            <th className="col-fraud" onClick={() => handleSort('fraudScore')}>
+                                FRAUD SCORE
+                                {sortConfig.key === 'fraudScore' && (
+                                    <span className="sort-icon">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                                )}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -209,12 +223,17 @@ const IPQualityResults = ({ results = [], onExportCSV }) => {
                                         </td>
                                         <td className="col-isp">{result.isp}</td>
                                         <td className="col-org">{result.organization}</td>
+                                        <td className="col-fraud">
+                                            <span className={`score-badge score-${getScoreLevel(result.fraudScore)}`}>
+                                                {result.fraudScore}
+                                            </span>
+                                        </td>
                                     </tr>
                                 );
                             })
                         ) : (
                             <tr>
-                                <td colSpan="9" className="no-results">
+                                <td colSpan="10" className="no-results">
                                     {(!results || results.length === 0) ? 'No results yet. Check some proxies from the Home tab.' : 'No results match your filters.'}
                                 </td>
                             </tr>

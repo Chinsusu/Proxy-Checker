@@ -150,7 +150,7 @@
     border-collapse: collapse;
     table-layout: fixed;
     /* ← KEY: Enables fixed column widths */
-    min-width: 1600px;
+    min-width: 1750px;
 }
 
 .results-table thead {
@@ -217,6 +217,10 @@
 
 .col-org {
     width: 220px;
+}
+
+.col-fraud {
+    width: 120px;
 }
 
 .results-table td {
@@ -326,6 +330,39 @@
 .flag-no {
     background: #d1fae5;
     color: #065f46;
+}
+
+.score-badge {
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-block;
+    min-width: 40px;
+    text-align: center;
+}
+
+.score-clean {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+.score-warning {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.score-high {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+.score-unknown {
+    background: #f3f4f6;
+    color: #374151;
 }
 
 .no-results {

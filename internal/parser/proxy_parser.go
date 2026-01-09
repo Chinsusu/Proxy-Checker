@@ -18,7 +18,7 @@ func ParseProxyList(input string) []models.ProxyInput {
 		parts := strings.Split(line, ":")
 		if len(parts) >= 2 {
 			proxy := models.ProxyInput{
-				IP:   parts[0],
+				Host: parts[0],
 				Port: parts[1],
 			}
 			if len(parts) >= 4 {

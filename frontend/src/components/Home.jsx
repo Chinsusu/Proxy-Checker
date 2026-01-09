@@ -28,7 +28,7 @@ function Home({ runWhois, runQuality, loading }) {
 
             <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 0.125rem 0.25rem rgba(165, 163, 174, 0.3)' }}>
                 <textarea
-                    placeholder="Enter IPs (one per line) or Proxies (IP:Port:User:Pass)..."
+                    placeholder="Enter IPs (one per line) or Proxies (Host:Port:User:Pass)..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onBlur={handleParse}

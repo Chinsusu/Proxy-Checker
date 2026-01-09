@@ -38,7 +38,7 @@ function App() {
         try {
             const parseRes = await api.parseInput(input);
             const proxies = parseRes.proxies.map(p => {
-                let s = `${p.ip}:${p.port}`;
+                let s = `${p.host}:${p.port}`;
                 if (p.username && p.password) {
                     s += `:${p.username}:${p.password}`;
                 }
@@ -58,7 +58,8 @@ function App() {
                 ...r,
                 proxy: `${r.ip}:${r.port}`,
                 vpn: r.vpn ? 'Yes' : 'No',
-                proxyFlag: r.proxy ? 'Yes' : 'No'
+                proxyFlag: r.proxy ? 'Yes' : 'No',
+                fraudScore: r.fraud_score || 'N/A'
             }));
 
             setIpQualityResults(mappedResults);
