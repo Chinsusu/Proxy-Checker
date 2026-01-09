@@ -50,7 +50,9 @@ function App() {
                 return;
             }
             setActiveTab('quality');
-            const results = await api.checkIPQuality(proxies);
+            const apiKey = localStorage.getItem('ipquality_api_key') || '';
+            console.log("Preparing Quality check with API Key:", apiKey ? "PRESENT" : "MISSING");
+            const results = await api.checkIPQuality(proxies, apiKey);
             console.log("Quality Results:", results);
 
             // Map results to match UI expectations

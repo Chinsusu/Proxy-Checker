@@ -13,18 +13,27 @@ import (
 func CheckIPQuality(ip string, proxyClient *proxy.ProxyClient) (*models.IPQualityResult, error) {
 	url := fmt.Sprintf("https://www.ipqualityscore.com/free-ip-lookup-proxy-vpn-test/lookup/%s", ip)
 
+	httpClient := http.DefaultClient
+	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+	if proxyClient != nil {
+		httpClient = proxyClient.HTTPClient
+		userAgent = proxyClient.UserAgent
+	}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", proxyClient.UserAgent)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+	// Simplified headers to match reference project's success pattern
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Cache-Control", "max-age=0")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
 	req.Header.Set("Referer", "https://www.google.com/")
 
-	resp, err := proxyClient.HTTPClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return &models.IPQualityResult{
 			IP:     ip,
@@ -33,6 +42,12 @@ func CheckIPQuality(ip string, proxyClient *proxy.ProxyClient) (*models.IPQualit
 		}, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusForbidden {
+		// FALLBACK TO SCAMALYTICS
+		fmt.Printf("[Fallback] IPQualityScore 403 Forbidden for IP: %s, trying Scamalytics...\n", ip)
+		return CheckScamalytics(ip, proxyClient)
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("bad status code: %d", resp.StatusCode)

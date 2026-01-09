@@ -15,6 +15,7 @@ type Config struct {
 			CacheTTL  time.Duration `yaml:"cache_ttl"`
 		} `yaml:"ipwho"`
 		IPQuality struct {
+			APIKey     string        `yaml:"api_key"`
 			Timeout    time.Duration `yaml:"timeout"`
 			UserAgents []string      `yaml:"user_agents"`
 			DelayRange []int         `yaml:"delay_range"`
@@ -42,6 +43,7 @@ api:
     timeout: 30s
     cache_ttl: 24h
   ipquality:
+    api_key: ""
     timeout: 30s
     user_agents:
       - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"

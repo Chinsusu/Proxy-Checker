@@ -104,10 +104,28 @@ func (a *App) HandleCheckWhois(w http.ResponseWriter, r *http.Request) {
 func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Proxies []string `json:"proxies"`
+		APIKey  string   `json:"api_key"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	a.logger.Debug().
+		Int("proxies_count", len(body.Proxies)).
+		Str("api_key_provided", func() string {
+			if body.APIKey == "" {
+				return "NO"
+			}
+			return "YES"
+		}()).
+		Msg("Received Quality Check Request")
+
+	// Update config if APIKey is provided in request
+	effectiveAPIKey := a.config.API.IPQuality.APIKey
+	if body.APIKey != "" {
+		effectiveAPIKey = body.APIKey
+		a.logger.Debug().Msg("Using API Key provided in request")
 	}
 
 	a.logger.Info().Int("count", len(body.Proxies)).Msg("Starting IPQuality check")
@@ -184,11 +202,60 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 		a.logger.Info().Str("proxy", proxyStr).Str("exit_ip", exitIP).Msg("Proxy is LIVE")
 
 		// Step 2: Quality Check (Use the ACTUAL Exit IP)
-		res, err := checker.CheckIPQuality(exitIP, client)
+		var res *models.IPQualityResult
+		// err is already declared in the outer scope of the closure
+
+		// Try Official API first if API key is set
+		if effectiveAPIKey != "" {
+			maskedKey := "set"
+			if len(effectiveAPIKey) > 8 {
+				maskedKey = effectiveAPIKey[:4] + "****" + effectiveAPIKey[len(effectiveAPIKey)-4:]
+			}
+			a.logger.Info().Str("exit_ip", exitIP).Str("api_key", maskedKey).Msg("Using Official IPQuality API...")
+			res, err = checker.CheckIPQualityAPI(effectiveAPIKey, exitIP, client)
+		} else {
+			a.logger.Info().Str("exit_ip", exitIP).Msg("No API Key set, using scraping method...")
+			// No API key, use scraping
+			res, err = checker.CheckIPQuality(exitIP, client)
+		}
+
 		if err != nil {
-			a.logger.Error().Err(err).Str("exit_ip", exitIP).Str("proxy", proxyStr).Msg("IPQuality check failed")
-			// Even if IPQuality fails, it's still 'Live' because step 1 passed
-			return models.IPQualityResult{IP: exitIP, Port: port, Status: "Live", Error: "Quality info failed: " + err.Error()}
+			// HYBRID FALLBACK: If proxy check is blocked (403) or API failed, try checking directly from Local IP
+			if strings.Contains(err.Error(), "403") || effectiveAPIKey != "" {
+				a.logger.Info().Str("exit_ip", exitIP).Str("proxy", proxyStr).Msg("[Fallback] Check failed. Trying Direct Check...")
+
+				// Try API directly first
+				if effectiveAPIKey != "" {
+					res, err = checker.CheckIPQualityAPI(effectiveAPIKey, exitIP, nil)
+				}
+
+				// If Direct API failed or wasn't used, try Scraping directly
+				if err != nil || effectiveAPIKey == "" {
+					res, err = checker.CheckIPQuality(exitIP, nil) // passing nil for proxyClient means Direct Check
+				}
+
+				if err != nil || (res != nil && res.FraudScore == "") {
+					a.logger.Info().Str("exit_ip", exitIP).Msg("[Fallback] IPQualityScore failed. Trying Scamalytics...")
+					res, err = checker.CheckScamalytics(exitIP, nil)
+				}
+
+				if err != nil || (res != nil && res.FraudScore == "") {
+					a.logger.Info().Str("exit_ip", exitIP).Msg("[Fallback] Scamalytics failed. Trying AbuseIPDB...")
+					res, err = checker.CheckAbuseIPDB(exitIP, nil)
+				}
+
+				if err == nil {
+					if res.Error == "" {
+						res.Error = "(Source: Direct Check)"
+					}
+				}
+			}
+
+			if err != nil {
+				a.logger.Error().Err(err).Str("exit_ip", exitIP).Str("proxy", proxyStr).Msg("IPQuality check failed even with fallback")
+				// Even if IPQuality fails, it's still 'Live' because step 1 passed
+				return models.IPQualityResult{IP: exitIP, Port: port, Status: "Live", Error: "Quality info failed: " + err.Error()}
+			}
 		}
 		res.Port = port
 		res.Status = "Live" // Ensure status is Live if we reach here
@@ -205,5 +272,21 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 	}
 	wp.Stop()
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
+}
+
+func (a *App) HandleSetAPIKey(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		APIKey string `json:"api_key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	a.config.API.IPQuality.APIKey = strings.TrimSpace(body.APIKey)
+	a.logger.Info().Msg("IPQuality API Key updated from frontend")
+
+	w.WriteHeader(http.StatusOK)
 }

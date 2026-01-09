@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"crypto/tls"
 	"net"
 	"net/http"
 	"net/url"
@@ -83,9 +82,7 @@ func NewProxyClient(proxyStr string, userAgent string, timeout time.Duration) (*
 		KeepAlive: 30 * time.Second,
 	}
 
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
+	transport := &http.Transport{}
 
 	// proxy.FromURL only supports socks5, socks4, socks4a.
 	// For http/https, we use the standard transport.Proxy.
@@ -135,9 +132,9 @@ func (pc *ProxyClient) TestConnectivity() (bool, error) {
 
 func GetRandomUserAgent() string {
 	userAgents := []string{
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
-		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
 	}
 	return userAgents[time.Now().UnixNano()%int64(len(userAgents))]
 }

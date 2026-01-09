@@ -18,11 +18,11 @@ export const checkWhois = async (ips) => {
     return response.json();
 };
 
-export const checkIPQuality = async (proxies) => {
+export const checkIPQuality = async (proxies, apiKey) => {
     const response = await fetch(`${API_BASE}/check/quality`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proxies })
+        body: JSON.stringify({ proxies, api_key: apiKey })
     });
     return response.json();
 };

@@ -37,6 +37,7 @@ func main() {
 		r.Post("/parse", app.HandleParseInput)
 		r.Post("/check/whois", app.HandleCheckWhois)
 		r.Post("/check/quality", app.HandleCheckIPQuality)
+		r.Post("/config/ipquality/apikey", app.HandleSetAPIKey)
 	})
 
 	// Serve Static Files

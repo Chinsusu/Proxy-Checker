@@ -1,9 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as api from '../services/api';
 
 function Home({ runWhois, runQuality, loading }) {
     const [input, setInput] = useState('');
     const [stats, setStats] = useState({ total: 0, ips: 0, proxies: 0 });
+    const [apiKey, setApiKey] = useState(localStorage.getItem('ipquality_api_key') || '');
+
+    useEffect(() => {
+        const savedKey = localStorage.getItem('ipquality_api_key');
+        if (savedKey) {
+            syncApiKey(savedKey);
+        }
+    }, []);
+
+    const syncApiKey = async (key) => {
+        if (!key) return;
+        try {
+            await fetch('/api/config/ipquality/apikey', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_key: key })
+            });
+            console.log('API Key synced to backend');
+        } catch (err) {
+            console.error('Failed to sync API key:', err);
+        }
+    };
+
+    const saveApiKey = async () => {
+        localStorage.setItem('ipquality_api_key', apiKey);
+        await syncApiKey(apiKey);
+        alert('API Key saved successfully!');
+    };
 
     const handleParse = async () => {
         if (!input.trim()) return;
@@ -24,6 +52,23 @@ function Home({ runWhois, runQuality, loading }) {
             <div className="page-header">
                 <h1 className="page-title">IP & Proxy Checker</h1>
                 <p style={{ color: 'var(--text-muted)' }}>Parse and check IP information from multiple sources</p>
+            </div>
+
+            <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 0.125rem 0.25rem rgba(165, 163, 174, 0.3)', marginBottom: '1.5rem' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem' }}>IPQualityScore Configuration</h3>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <input
+                        type="password"
+                        placeholder="Enter IPQualityScore API Key (Free 1000/mo)..."
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: '0.4rem', border: '1px solid #ddd' }}
+                    />
+                    <button className="btn-primary" onClick={saveApiKey} style={{ padding: '0.6rem 1.5rem' }}>Save Key</button>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                    Get a free key at <a href="https://www.ipqualityscore.com/create-account" target="_blank" rel="noreferrer">ipqualityscore.com</a>
+                </p>
             </div>
 
             <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 0.125rem 0.25rem rgba(165, 163, 174, 0.3)' }}>
