@@ -37,7 +37,13 @@ function App() {
         setLoading(true);
         try {
             const parseRes = await api.parseInput(input);
-            const proxies = parseRes.proxies.map(p => `${p.ip}:${p.port}`);
+            const proxies = parseRes.proxies.map(p => {
+                let s = `${p.ip}:${p.port}`;
+                if (p.username && p.password) {
+                    s += `:${p.username}:${p.password}`;
+                }
+                return s;
+            });
             if (proxies.length === 0) {
                 alert("No proxies found in input!");
                 setLoading(false);

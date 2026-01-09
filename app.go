@@ -116,31 +116,44 @@ func (a *App) HandleCheckIPQuality(w http.ResponseWriter, r *http.Request) {
 	wp.Start(func(job checker.Job) interface{} {
 		proxyStr := job.Data.(string)
 
-		// Extract IP and Port for lookup
+		// Extract IP and Port for default display
 		ip := proxyStr
 		port := ""
 		if idx := strings.Index(ip, ":"); idx != -1 {
 			port = ip[idx+1:]
 			ip = ip[:idx]
-			// Handle cases like IP:Port:User:Pass
 			if idx2 := strings.Index(port, ":"); idx2 != -1 {
 				port = port[:idx2]
 			}
 		}
 
 		ua := proxy.GetRandomUserAgent()
-		client, err := proxy.NewProxyClient("http://"+proxyStr, ua, a.config.Proxy.ConnectionTimeout)
+		// NewProxyClient now handles protocol normalization internally
+		client, err := proxy.NewProxyClient(proxyStr, ua, a.config.Proxy.ConnectionTimeout)
 		if err != nil {
 			a.logger.Error().Err(err).Str("proxy", proxyStr).Msg("Failed to create proxy client")
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: err.Error()}
+			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Invalid proxy format"}
 		}
 
+		// Step 1: Connectivity Check (Live check)
+		// We use a reliable IP lookup service to verify the proxy works and get our own IP
+		// Using http instead of https to avoid CONNECT handshake overhead/failures.
+		testResp, err := client.HTTPClient.Get("http://api.ipify.org")
+		if err != nil {
+			a.logger.Warn().Err(err).Str("proxy", proxyStr).Msg("Proxy is Dead")
+			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: "Connection failed"}
+		}
+		testResp.Body.Close()
+
+		// Step 2: Quality Check
 		res, err := checker.CheckIPQuality(ip, client)
 		if err != nil {
 			a.logger.Error().Err(err).Str("ip", ip).Str("proxy", proxyStr).Msg("IPQuality check failed")
-			return models.IPQualityResult{IP: ip, Port: port, Status: "Dead", Error: err.Error()}
+			// Even if IPQuality fails, it's still 'Live' because step 1 passed
+			return models.IPQualityResult{IP: ip, Port: port, Status: "Live", Error: "Quality info unavailable"}
 		}
 		res.Port = port
+		res.Status = "Live" // Ensure status is Live if we reach here
 		return *res
 	})
 

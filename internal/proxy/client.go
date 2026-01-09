@@ -2,8 +2,10 @@ package proxy
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -15,7 +17,30 @@ type ProxyClient struct {
 }
 
 func NewProxyClient(proxyStr string, userAgent string, timeout time.Duration) (*ProxyClient, error) {
-	proxyURL, err := url.Parse(proxyStr)
+	// Normalize proxy string. Default to http if no scheme is provided.
+	finalProxyStr := proxyStr
+	scheme := "http"
+	if strings.Contains(finalProxyStr, "://") {
+		parts := strings.SplitN(finalProxyStr, "://", 2)
+		scheme = parts[0]
+		finalProxyStr = parts[1]
+	}
+
+	// Handle IP:Port:User:Pass format
+	parts := strings.Split(finalProxyStr, ":")
+	var proxyURL *url.URL
+	var err error
+
+	if len(parts) >= 4 {
+		// IP:Port:User:Pass -> scheme://User:Pass@IP:Port
+		u := fmt.Sprintf("%s://%s:%s@%s:%s", scheme, parts[2], parts[3], parts[0], parts[1])
+		proxyURL, err = url.Parse(u)
+	} else {
+		// IP:Port or scheme://IP:Port
+		u := fmt.Sprintf("%s://%s", scheme, finalProxyStr)
+		proxyURL, err = url.Parse(u)
+	}
+
 	if err != nil {
 		return nil, err
 	}

@@ -15,7 +15,7 @@ worker:
   retry_delay: 2s
 
 proxy:
-  connection_timeout: 10s
+  connection_timeout: 20s
   types: ["http", "https", "socks5"]
 
 storage:
