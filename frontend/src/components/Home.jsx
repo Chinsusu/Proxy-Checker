@@ -32,6 +32,15 @@ function Home({ runWhois, runQuality, loading }) {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onBlur={handleParse}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            // Ensure Enter (and Ctrl+Enter) always creates a newline
+                            // Default behavior for textarea is newline, but we stop propagation
+                            // to avoid triggering any parent form actions or general key handlers.
+                            e.stopPropagation();
+                        }
+                    }}
+                    style={{ resize: 'vertical' }}
                 />
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button className="btn-primary" onClick={() => runWhois(input)} disabled={loading}>
